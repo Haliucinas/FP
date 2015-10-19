@@ -2,7 +2,7 @@ module Parser
 where
 
 import Data.List.Extra
-import TicTacToe.Messages.SExpr
+import TicTacToe.Messages.Json
 
 type InternalMap = [(String, String)]
 -- Size of the grid
@@ -48,16 +48,18 @@ getMapInnards :: String -> InternalMap -> InternalMap
 getMapInnards [] acc = acc
 getMapInnards str acc =
     let 
-        item = takeWhile (/= ' ') str
-        value = takeWhile (/= ' ') (drop (length item + 1) str)
-        rest = drop (length item + length value + 2) str
-    in reverse $ getMapInnards rest ((item, value) : acc)
+        item = takeWhile (/= ',') str
+        tuple = case (stripInfix ":" item) of
+            Just (key, value) -> (key, value)
+            Nothing -> error "Parser error."
+        rest = drop (length item + 1) str
+    in reverse $ getMapInnards rest (tuple : acc)
 
 getMapElem :: String -> Maybe (String, String)
 getMapElem [] = Nothing
 getMapElem str =
     let 
-        key = takeWhile (/= ')') str ++ ")"
+        key = takeWhile (/= '}') str ++ "}"
         rest = drop (length key + 2) str
     in Just (key, rest)
 
@@ -72,16 +74,14 @@ parseMaps :: [String] -> [InternalMap] -> [InternalMap]
 parseMaps [] acc = acc
 parseMaps (x:xs) acc =
     let
-        num = takeWhile (/= '(') x
-        denum = drop (length num) x
-        striped = filter (/= '"') (stripElem denum "(m " ")" "Not a map.")
+        striped = filter (/=' ') (filter (/= '"') (stripElem x "{" "}" "Not a map."))
         parsed = getMapInnards striped []
     in parseMaps xs (parsed : acc)
 
-parseSExpt :: String -> [InternalMap]
-parseSExpt str =
+parseJson :: String -> [InternalMap]
+parseJson str =
     let
-        listInnards = stripElem str "(m " ")" "Not a list."
+        listInnards = stripElem str "[" "]" "Not a list."
         parsedData = parseMaps (parseList listInnards []) []
     in parsedData
 
@@ -109,6 +109,6 @@ winner map
     | winner' O  = Just 'o'
     | otherwise = Nothing
     where
-        grid = fillTheGrid (parseSExpt map) (concat emptyGrid)
+        grid = fillTheGrid (parseJson map) (concat emptyGrid)
         winner' :: Player -> Bool
         winner' player = any (all (== Just player)) $ getWinSeqs grid
