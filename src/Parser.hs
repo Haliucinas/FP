@@ -1,35 +1,14 @@
-module Parser
-where
+module Parser where
 
 import Data.List.Extra
-import TicTacToe.Messages.Scala
 
 type InternalMap = [(String, String)]
--- Size of the grid
-n :: Int
-n = 3
-
 data Player = X | O deriving (Show, Read, Eq)
-type Marking = Maybe Player
-type Position = (Int, Int)
 
-type Grid = [[Marking]]
-
-strToPlayer :: String -> Player
-strToPlayer "x" = X
-strToPlayer "X" = X
-strToPlayer "o" = O
-strToPlayer "O" = O
-strToPlayer "0" = O
-
--- An empty grid of size n x n.
-emptyGrid :: Grid
-emptyGrid = replicate n $ replicate n Nothing
-
-replaceNth :: Int -> Marking -> [Marking] -> [Marking]
-replaceNth n newVal (x:xs)
-     | n == 0 = newVal:xs
-     | otherwise = x:replaceNth (n-1) newVal xs
+playerToStr player =
+    case player of
+        Just X -> "x"
+        Just O -> "o"
 
 findParam :: InternalMap -> String -> String -> String
 findParam map param errorMsg =
@@ -79,37 +58,39 @@ parseMaps (x:xs) acc =
         parsed = getMapInnards striped []
     in parseMaps xs (parsed : acc)
 
-parseScala :: String -> [InternalMap]
-parseScala str =
+serializeScalaMapInnards [] acc = acc
+serializeScalaMapInnards (x:xs) acc =
+    let
+        xVal = findParam x "x" "x not defined."
+        yVal = findParam x "y" "y not defined."
+        player = findParam x "v" "v not defined."
+        str = "Map(x -> " ++ xVal ++ ", y -> " ++ yVal ++ ", v -> " ++ player ++ ")"
+    in serializeScalaMapInnards xs (str : acc)
+
+serializeScalaGridInnards :: [Maybe Player] -> Int -> [String] -> [String]
+serializeScalaGridInnards [] n acc = acc
+serializeScalaGridInnards (x:xs) n acc =
+    if x /= Nothing then let
+        (xVal,yVal) = (divMod n 3)
+        str = "Map(x -> " ++ (show xVal) ++ ", y -> " ++ (show yVal) ++ ", v -> " ++ (playerToStr x) ++ ")"
+    in serializeScalaGridInnards xs (n+1) (str:acc)
+    else serializeScalaGridInnards xs (n+1) acc
+
+serializeScalaMap :: [InternalMap] -> String
+serializeScalaMap map =
+    let
+        innards = intercalate ", " (reverse $ serializeScalaMapInnards map [])
+    in "List(" ++ innards ++ ")"
+
+serializeScalaGrid :: [Maybe Player] -> String
+serializeScalaGrid list =
+    let
+        innards = intercalate ", " (reverse $ serializeScalaGridInnards list 0 [])
+    in "List(" ++ innards ++ ")"
+
+deserializeScala :: String -> [InternalMap]
+deserializeScala str =
     let
         listInnards = stripElem str "List" "Not a list."
         parsedData = parseMaps (parseList listInnards []) []
     in parsedData
-
-fillTheGrid :: [InternalMap] -> [Marking] -> Grid
-fillTheGrid [] grid = chunksOf n grid
-fillTheGrid (x:xs) grid =
-    let
-        pos1 = read (findParam x "x" "x not defined.") :: Int
-        pos2 = read (findParam x "y" "y not defined.") :: Int
-        player = findParam x "v" "player not defined."
-        index = n * pos1 + pos2
-        newGrid = replaceNth index (Just (strToPlayer player)) grid
-    in fillTheGrid xs newGrid
-
-getWinSeqs :: Grid -> [[Marking]]
-getWinSeqs grid = horizontal ++ vertical ++ [fDiag, bDiag]
-  where horizontal = grid
-        vertical = transpose grid
-        fDiag = zipWith (!!) (reverse grid) [0..]
-        bDiag = zipWith (!!) grid [0..]
-
-winner :: String -> Maybe Char
-winner map
-    | winner' X  = Just 'x'
-    | winner' O  = Just 'o'
-    | otherwise = Nothing
-    where
-        grid = fillTheGrid (parseScala map) (concat emptyGrid)
-        winner' :: Player -> Bool
-        winner' player = any (all (== Just player)) $ getWinSeqs grid
