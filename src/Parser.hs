@@ -5,6 +5,7 @@ import Data.List.Extra
 type InternalMap = [(String, String)]
 data Player = X | O deriving (Show, Read, Eq)
 
+playerToStr :: Maybe Player -> String
 playerToStr player =
     case player of
         Just X -> "x"
@@ -58,6 +59,7 @@ parseMaps (x:xs) acc =
         parsed = getMapInnards striped []
     in parseMaps xs (parsed : acc)
 
+serializeScalaMapInnards :: [InternalMap] -> [String] -> [String]
 serializeScalaMapInnards [] acc = acc
 serializeScalaMapInnards (x:xs) acc =
     let

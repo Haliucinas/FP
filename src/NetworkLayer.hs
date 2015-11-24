@@ -12,17 +12,20 @@ import Parser
 data Req = GET_REQ | POST_REQ deriving (Show, Read, Eq)
 nextReq GET_REQ = POST_REQ
 nextReq POST_REQ = GET_REQ
-getReq GET_REQ id = reqGET id
-getReq POST_REQ id = reqPOST id
+getReq GET_REQ id dat = reqGET id dat
+getReq POST_REQ id dat = reqPOST id dat
 
+run :: String -> Int -> IO () 
 run id times = do
     conn <- TCP.openStream "tictactoe.homedir.eu" 80
     let firstMove = serializeScalaGrid $ concat $ randomMove emptyGrid X times
     listen conn id times 0 firstMove POST_REQ
 
+updateURI :: String -> URI
 updateURI id = case parseURI ("http://tictactoe.homedir.eu/game/" ++ id ++ "/player/1") of
     Just url -> url
 
+reqGET :: String -> String -> Request String
 reqGET id moves = Request { 
     rqURI = updateURI id :: URI, 
     rqMethod = GET :: RequestMethod, 
@@ -32,6 +35,7 @@ reqGET id moves = Request {
     rqBody = ""
 }
 
+reqPOST :: String -> String -> Request String
 reqPOST id moves = Request { 
     rqURI = updateURI id :: URI, 
     rqMethod = POST :: RequestMethod,
@@ -42,6 +46,7 @@ reqPOST id moves = Request {
     rqBody = moves
 }
 
+listen :: HandleStream String -> String -> Int -> Int -> String -> Req -> IO ()
 listen h id times idx dat req =
     if idx < times then do
         rawResponse <- sendHTTP h (getReq req (id ++ (show idx)) dat)

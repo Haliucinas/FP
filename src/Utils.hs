@@ -10,6 +10,7 @@ shuffle seed len xs =
                 (y, ys) =  choose n xs
                 ys' = shuffle seed (len - 1) ys
         in y:ys'
+
 choose _ [] = error "choose: index out of range"
 choose 0 (x:xs) = (x, xs)
 choose i (x:xs) = let (y, ys) = choose (i - 1) xs in (y, x:ys)
