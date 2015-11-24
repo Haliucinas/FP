@@ -1,34 +1,14 @@
-module Parser
-where
+module Parser where
 
 import Data.List.Extra
-import TicTacToe.Messages.Json
 
 type InternalMap = [(String, String)]
--- Size of the grid
-n :: Int
-n = 3
-
 data Player = X | O deriving (Show, Read, Eq)
-type Position = (Int, Int)
 
-type Grid = [[Maybe Player]]
-
-strToPlayer :: String -> Player
-strToPlayer "x" = X
-strToPlayer "X" = X
-strToPlayer "o" = O
-strToPlayer "O" = O
-strToPlayer "0" = O
-
--- An empty grid of size n x n.
-emptyGrid :: Grid
-emptyGrid = replicate n $ replicate n Nothing
-
-replaceNth :: Int -> Maybe Player -> [Maybe Player] -> [Maybe Player]
-replaceNth n newVal (x:xs)
-     | n == 0 = newVal:xs
-     | otherwise = x:replaceNth (n-1) newVal xs
+playerToStr player =
+    case player of
+        Just X -> "x"
+        Just O -> "o"
 
 findParam :: InternalMap -> String -> String -> String
 findParam map param errorMsg =
@@ -78,37 +58,39 @@ parseMaps (x:xs) acc =
         parsed = getMapInnards striped []
     in parseMaps xs (parsed : acc)
 
-parseJson :: String -> [InternalMap]
-parseJson str =
+serializeJsonMapInnards [] acc = acc
+serializeJsonMapInnards (x:xs) acc =
+    let
+        xVal = findParam x "x" "x not defined."
+        yVal = findParam x "y" "y not defined."
+        player = findParam x "v" "v not defined."
+        str = "{\"x\": " ++ xVal ++ ", \"y\": " ++ yVal ++ ", \"v\": \"" ++ player ++ "\"}"
+    in serializeJsonMapInnards xs (str : acc)
+
+serializeJsonGridInnards :: [Maybe Player] -> Int -> [String] -> [String]
+serializeJsonGridInnards [] n acc = acc
+serializeJsonGridInnards (x:xs) n acc =
+    if x /= Nothing then let
+        (xVal,yVal) = (divMod n 3)
+        str = "{\"x\": " ++ (show xVal) ++ ", \"y\": " ++ (show yVal) ++ ", \"v\": \"" ++ (playerToStr x) ++ "\"}"
+    in serializeJsonGridInnards xs (n+1) (str:acc)
+    else serializeJsonGridInnards xs (n+1) acc
+
+serializeJsonMap :: [InternalMap] -> String
+serializeJsonMap map =
+    let
+        innards = intercalate ", " (reverse $ serializeJsonMapInnards map [])
+    in "[" ++ innards ++ "]"
+
+serializeJsonGrid :: [Maybe Player] -> String
+serializeJsonGrid list =
+    let
+        innards = intercalate ", " (reverse $ serializeJsonGridInnards list 0 [])
+    in "[" ++ innards ++ "]"
+
+deserializeJson :: String -> [InternalMap]
+deserializeJson str =
     let
         listInnards = stripElem str "[" "]" "Not a list."
         parsedData = parseMaps (parseList listInnards []) []
     in parsedData
-
-fillTheGrid :: [InternalMap] -> [Maybe Player] -> Grid
-fillTheGrid [] grid = chunksOf n grid
-fillTheGrid (x:xs) grid =
-    let
-        pos1 = read (findParam x "x" "x not defined.") :: Int
-        pos2 = read (findParam x "y" "y not defined.") :: Int
-        player = findParam x "v" "player not defined."
-        index = n * pos1 + pos2
-        newGrid = replaceNth index (Just (strToPlayer player)) grid
-    in fillTheGrid xs newGrid
-
-getWinSeqs :: Grid -> [[Maybe Player]]
-getWinSeqs grid = horizontal ++ vertical ++ [fDiag, bDiag]
-  where horizontal = grid
-        vertical = transpose grid
-        fDiag = zipWith (!!) (reverse grid) [0..]
-        bDiag = zipWith (!!) grid [0..]
-
-winner :: String -> Maybe Char
-winner map
-    | winner' X  = Just 'x'
-    | winner' O  = Just 'o'
-    | otherwise = Nothing
-    where
-        grid = fillTheGrid (parseJson map) (concat emptyGrid)
-        winner' :: Player -> Bool
-        winner' player = any (all (== Just player)) $ getWinSeqs grid
