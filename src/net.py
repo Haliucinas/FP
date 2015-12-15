@@ -18,7 +18,7 @@ def run(id):
         else:
             runImpl(idx, req)
 
-    runImpl(0, postk )
+    runImpl(0, post)
 
 
 def makeUrl(id, player):
