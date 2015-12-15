@@ -6,8 +6,8 @@ from multiprocessing import Process
 
 import net
 
-def worker(_id, nums, req, player):
-    [net.run * Just((id, player, req)) for id in [_id + str(it) for it in range(nums)]]
+def worker(_id, nums, req, player, protocol):
+    [net.run * Just((id, player, req, protocol)) for id in [_id + str(it) for it in range(nums)]]
 
 if __name__ == "__main__":
 
@@ -17,8 +17,8 @@ if __name__ == "__main__":
     parser.add_argument('nums')
 
     processes = [
-        Process(target=worker, args=(parser.parse_args().id1, int(parser.parse_args().nums), net.post, 1,)),
-        Process(target=worker, args=(parser.parse_args().id2, int(parser.parse_args().nums), net.get, 2,))
+        Process(target=worker, args=(parser.parse_args().id1, int(parser.parse_args().nums), net.post, 1, 'scala+list',)),
+        Process(target=worker, args=(parser.parse_args().id2, int(parser.parse_args().nums), net.get, 2, 'json+list',))
     ]
 
     [process.start() for process in processes]

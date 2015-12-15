@@ -13,7 +13,7 @@ def run(params):
     def runImpl(idx, req):
         if idx == 10: return Nothing
 
-        status = req(params[0], params[1], 'scala+list', utils.predefinedMove('scala+list', idx).value)
+        status = req(params[0], params[1], params[3], utils.predefinedMove(params[3], idx).value)
         if status == 200:
             if req == post:
                 runImpl(idx+2, next(req))
