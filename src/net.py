@@ -4,7 +4,8 @@ from pymonad.Maybe import *
 
 import utils
 
-def run(id):
+def run(params):
+
 
     def next(req):
         return {post: get, get: post}[req]
@@ -12,7 +13,7 @@ def run(id):
     def runImpl(idx, req):
         if idx == 10: return Nothing
 
-        status = req(id, 1, 'scala+list', utils.predefinedMove('scala+list', idx).value)
+        status = req(params[0], params[1], 'scala+list', utils.predefinedMove('scala+list', idx).value)
         if status == 200:
             if req == post:
                 runImpl(idx+2, next(req))
@@ -21,7 +22,7 @@ def run(id):
         else:
             runImpl(idx, req)
 
-    runImpl(0, post)
+    runImpl(0, params[2])
 
 
 def makeUrl(id, player):
