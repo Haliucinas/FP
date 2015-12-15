@@ -6,17 +6,19 @@ import utils
 
 def run(id):
 
-	def runImpl(idx):
-		post(id, 1, 'scala+list', utils.predefinedMove('scala+list', idx).value)
-		get(id, 2, 'json+list')
+    def next(req):
+        return {post: get, get: post}[req]
 
-		if idx == 8: return Nothing
-		
-		post(id, 2, 'm-expr+list', utils.predefinedMove('m-expr+list', idx+1).value)
-		get(id, 1, 'bencode+list')
-		runImpl * Just(idx+2)
+    def runImpl(idx, req):
+        if idx == 8: return Nothing
 
-	runImpl * Just(0)
+        status = req(id, 1, 'scala+list', utils.predefinedMove('scala+list', idx).value)
+        if status == 200:
+            runImpl(idx+2, next(req))
+        else:
+            runImpl(idx, req)
+
+    runImpl(0, postk )
 
 
 def makeUrl(id, player):
@@ -24,8 +26,12 @@ def makeUrl(id, player):
 
 def post(id, player, protocol, payload):
     r = requests.post(makeUrl(id, player), headers = {'Content-Type': 'application/'+ protocol}, data = payload)
-    print('<< |', id, player, protocol)
+    if r.status_code == 200:
+        print('<< |', id, player, protocol)
+    return r.status_code
 
-def get(id, player, protocol):
+def get(id, player, protocol, payload):
     r = requests.get(makeUrl(id, player), headers = {'Accept': 'application/'+ protocol})
-    print('>> |', id, player, protocol)
+    if r.status_code == 200:
+        print('>> |', id, player, protocol)
+    return r.status_code
