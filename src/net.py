@@ -10,11 +10,14 @@ def run(id):
         return {post: get, get: post}[req]
 
     def runImpl(idx, req):
-        if idx == 8: return Nothing
+        if idx == 10: return Nothing
 
         status = req(id, 1, 'scala+list', utils.predefinedMove('scala+list', idx).value)
         if status == 200:
-            runImpl(idx+2, next(req))
+            if req == post:
+                runImpl(idx+2, next(req))
+            else:
+                runImpl(idx, next(req))
         else:
             runImpl(idx, req)
 
